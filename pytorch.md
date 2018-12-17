@@ -2,6 +2,9 @@
 
 `Tensor` is the base datastructure in `PyTorch`. Every `array like` datastructure is a tensor in this framework.
 
+*Gradient points in the direction of fastest change, so taking -ve and adding to the weigths minimizes loss*
+
+
 ## torch module
 
 ---
@@ -41,6 +44,10 @@ with torch.no_grad():
 
 `_`&rarr; at the end  means that it's an inplace operation 
 
+`tensor.fill_(val)`&rarr; inplace filling of a tensor
+
+`tensor.normal_(mean,sigma)`&rarr; similar to  &uarr;
+
 `tensor.mul_(constant)`&rarr; inplace multiplication of the tensor with the constant
 
 `tenor.sum(dim=0|1|..)`&rarr; similar to `torch.sum()`
@@ -54,6 +61,12 @@ with torch.no_grad():
 `tensor.view(a,-1)`&rarr; returns a tensor with of shape `a` in first axis, the second one is resolved automatically
 
 `tensor.numpy()`&rarr; returns a numpy version of the tensor, but doesn't clone the object, so any change in numpy/tensor is reflected on the whole thing
+
+`tensor.backward()`&rarr; calculates and sets the gradients for all previously tracked Tensors upto current one
+
+`tensor.item()`&rarr; returns the value of a single item `Tensor`
+
+`tensor.type(Tensor.SomeOtherType)`&rarr; changing type of `Tensor`
 
 ```text
 MATRIX MULTIPLICATION FOR SUMMING UP THE WEIGHTS AND INPUTS
@@ -69,6 +82,8 @@ h = [x1,x2,....,xn][
                     [wn]
                     ]
 ```
+
+`tensor.topk(n,dim=0|1|2...)`&rarr; returns n highest values and index along the dimension
 
 ## NN Module
 
@@ -93,7 +108,213 @@ h = [x1,x2,....,xn][
 
 `nn.CrossEntropyLoss()`&rarr; a loss function that combines `nn.LogSoftmax()` and `nn.NLLLoss()`
 
+`nn.Dropout(p=probability)`&rarr; drop out probability of the current layer's nodes
+
 `model = nn.Module instance() , preferably a class subclassing from nn.Module`
 
 `model.layerName.weights | model.layerName.bias`&rarr; returns `AutoGrad` variables corresponding to the weights and bias of the layer in consideration
 
+`model.eval()`&rarr; model goes into evaluation mode and sets the `dropout` layers off
+
+`model.train()`&rarr; model goes into training mode and sets the `dropout` layers on
+
+`model.parameters()`&rarr; returns all the parameters of the model
+
+`model.someLayer.parameters()`&rarr; returns the parameters of `someLayer` only
+
+`model.state_dict()`&rarr; returns the `stateDictOfModel` that can be used to save the current state of the model
+
+```python
+#Another way to build a model without creating class
+
+model = nn.Sequential(
+    nn.SomeLayer1(),
+    nn.SomeActivationFunction1(),
+    nn.SomeLayer2(),
+    nn.SomeActivationFunction2(),
+    .
+    .
+    .
+)
+
+logits = model(data) #output of the model
+loss = criterion(logits,actualLabels) #calculate loss
+```
+
+#### `import torch.nn.functional as F`
+
+Special module providing some static access to different functions.
+
+`F.Sigmoid()`
+
+`F.Softmax()`
+
+## AutoGrads
+
+`model.layerName.weights|bias`&rarr; returns a `AutoGrad` variables, which are different from `Tensor` variables.
+
+`autoGradVariable.data`&rarr; returns a pointer to the `Tensor` inside the variable
+
+## DataSets, `torchvision`
+
+---
+
+`from torchvision import datasets, transforms`
+
+`from torch.utils.data import DataLoader, ImageFolder`
+
+`transofrms.Compose()`&rarr; for composing a pipeline of transforms to do on the loaded data
+
+`transforms.Normalize((mean1,mean2,...),(std1,std2,...))`
+
+`transforms.ToTensor()`&rarr; This should be the last transform in the pipeline
+
+`transofrms.SeeMoreInTheDocks()`&rarr; this module also have image augmentation functions
+
+`DataLoader(tensorData,batachSize,transforms,shuffle...)`&rarr; loads and make batches of the tensorData provided
+
+`iter(dataLoaderObject)`&rarr; returns an iterator, so that we can call: iter.next() to get an image, label from the dataLoader
+
+`ImageFolder(pathToImageFolder, transforms)`&rarr; loads data from imagefolder, where the folder is organized for general image classification.
+
+`datasets.DataSetName(rootToSave,and other flags)`&rarr; for using the general datasets
+
+## Optimizers
+
+---
+`from torch import optim`
+
+`optim module`&rarr; contains implementations of  common and useful optimizers that can be used to train our model
+
+`optim.SGD(modelParameters,learningRate)`
+
+`optimizer.zero_grad()`&rarr; clears the current accumulated gradients, must be performed before backward pass
+
+`optimizer.step()`&rarr; updates the gradients, i.e. takes a step
+
+## SIMPLE NEURAL NETWORK
+
+### Training
+```python
+epochs = 5
+for e in range(epochs):
+    running_loss = 0 #loss in current epoch
+    for images, labels in trainloader:
+
+        #forwar propagation
+        log_ps = model(images) #last layer has LogSoftMax activation
+        loss = criterion(log_ps, labels) #loss is NLLLoss() function
+
+        #backward propagation
+        optimizer.zero_grad() #zeroing out the gradietns
+        loss.backward() #passing the loss backward
+        optimizer.step()
+        #accumulate loss for viewing purpose
+        running_loss += loss.item()
+    else:
+        print(f"Training loss: {running_loss/len(trainloader)}")
+```
+
+### Testing
+
+```python
+# ps contains probabilities of all classes, torch.exp() is used on the logits to get the actual probabilities as the activation of outputlayer is LogSoftMax
+img,label = (iter(testloader)).next()
+ps = torch.exp(model(img)) 
+```
+
+## Transfer Learning
+
+### model building
+
+```python
+from torchvision import models
+
+# Use GPU if it's available
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+model = models.densenet121(pretrained=True)
+
+# Freeze parameters so we don't backprop through them
+for param in model.parameters():
+    param.requires_grad = False
+
+#our own classifier is added as the classifier of the densenet
+model.classifier = nn.Sequential(nn.Linear(1024, 256),
+                                 nn.ReLU(),
+                                 nn.Dropout(0.2),
+                                 nn.Linear(256, 2),
+                                 nn.LogSoftmax(dim=1))
+
+#our own criterion for loss
+criterion = nn.NLLLoss()
+
+# Only train the classifier parameters, feature parameters are frozen
+optimizer = optim.Adam(model.classifier.parameters(), lr=0.003)
+
+#move the mode to cpu/gpu based on availability
+model.to(device);
+```
+
+## Training with vailadtion
+
+```python
+epochs = 1
+steps = 0
+running_loss = 0
+print_every = 5
+
+for epoch in range(epochs):
+    for inputs, labels in trainloader:
+        steps += 1
+        # Move input and label tensors to the default device
+        inputs, labels = inputs.to(device), labels.to(device)
+
+        #zero out the accumulated gradients
+        optimizer.zero_grad()
+
+        #forward pas
+        logps = model.forward(inputs)
+        loss = criterion(logps, labels)
+
+        #backwardpass
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+
+        #validation step
+        if steps % print_every == 0:
+            test_loss = 0
+            accuracy = 0
+
+            #turn off dropout layers
+            model.eval()
+
+            #do not accumulate gradients for the  testset
+            with torch.no_grad():
+                for inputs, labels in testloader:
+                    inputs, labels = inputs.to(device), labels.to(device)
+
+                    #forward pass
+                    logps = model.forward(inputs)
+                    batch_loss = criterion(logps, labels)
+
+                    #loss accumulation
+                    test_loss += batch_loss.item()
+
+                    # Calculate accuracy
+                    ps = torch.exp(logps)
+                    top_p, top_class = ps.topk(1, dim=1)
+                    equals = top_class == labels.view(*top_class.shape)
+                    accuracy += torch.mean(equals.type(torch.FloatTensor)).item()
+
+            print(f"Epoch {epoch+1}/{epochs}.. "
+                  f"Train loss: {running_loss/print_every:.3f}.. "
+                  f"Test loss: {test_loss/len(testloader):.3f}.. "
+                  f"Test accuracy: {accuracy/len(testloader):.3f}")
+            running_loss = 0
+
+            #turn on dropout layers
+            model.train()
+```
