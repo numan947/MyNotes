@@ -2,8 +2,7 @@
 
 `Tensor` is the base datastructure in `PyTorch`. Every `array like` datastructure is a tensor in this framework.
 
-*Gradient points in the direction of fastest change, so taking -ve and adding to the weigths minimizes loss*
-
+_Gradient points in the direction of fastest change, so taking -ve and adding to the weigths minimizes loss_
 
 ## torch module
 
@@ -27,7 +26,7 @@
 
 ```python
 with torch.no_grad():
-    calculation are done here that requires no gradient  
+    calculation are done here that requires no gradient
     tracking/update, e.g validation/test work on the
     current trained model
 ```
@@ -42,11 +41,11 @@ with torch.no_grad():
 
 ---
 
-`_`&rarr; at the end  means that it's an inplace operation 
+`_`&rarr; at the end means that it's an inplace operation
 
 `tensor.fill_(val)`&rarr; inplace filling of a tensor
 
-`tensor.normal_(mean,sigma)`&rarr; similar to  &uarr;
+`tensor.normal_(mean,sigma)`&rarr; similar to &uarr;
 
 `tensor.mul_(constant)`&rarr; inplace multiplication of the tensor with the constant
 
@@ -96,7 +95,7 @@ h = [x1,x2,....,xn][
 1. create a new class and subclass `nn.Module`
 2. inside `__init__(self):` of the new class, call `super().__init__()` at the very first line
 3. create the architecture
-4. override/create  `def forward(self,x)` method
+4. override/create `def forward(self,x)` method
 
 ### Module functionalities
 
@@ -182,9 +181,10 @@ Special module providing some static access to different functions.
 ## Optimizers
 
 ---
+
 `from torch import optim`
 
-`optim module`&rarr; contains implementations of  common and useful optimizers that can be used to train our model
+`optim module`&rarr; contains implementations of common and useful optimizers that can be used to train our model
 
 `optim.SGD(modelParameters,learningRate)`
 
@@ -195,6 +195,7 @@ Special module providing some static access to different functions.
 ## SIMPLE NEURAL NETWORK
 
 ### Training
+
 ```python
 epochs = 5
 for e in range(epochs):
@@ -220,7 +221,7 @@ for e in range(epochs):
 ```python
 # ps contains probabilities of all classes, torch.exp() is used on the logits to get the actual probabilities as the activation of outputlayer is LogSoftMax
 img,label = (iter(testloader)).next()
-ps = torch.exp(model(img)) 
+ps = torch.exp(model(img))
 ```
 
 ## Transfer Learning
@@ -398,16 +399,16 @@ for epoch in range(n_epochs):
         output = model(data)
         # calculate the loss
         loss = criterion(output, target)
-        # update running validation loss 
+        # update running validation loss
         valid_loss += loss.item()*data.size(0)
 
-    # print training/validation statistics 
+    # print training/validation statistics
     # calculate average loss over an epoch
     train_loss = train_loss/len(train_loader.dataset)
     valid_loss = valid_loss/len(valid_loader.dataset)
 
     print('Epoch: {} \tTraining Loss: {:.6f} \tValidation Loss: {:.6f}'.format(
-        epoch+1, 
+        epoch+1,
         train_loss,
         valid_loss
         ))
@@ -437,7 +438,7 @@ for data, target in test_loader:
     output = model(data)
     # calculate the loss
     loss = criterion(output, target)
-    # update test loss 
+    # update test loss
     test_loss += loss.item()*data.size(0)
     # convert output probabilities to predicted class
     _, pred = torch.max(output, 1)
@@ -466,3 +467,57 @@ print('\nTest Accuracy (Overall): %2d%% (%2d/%2d)' % (
     np.sum(class_correct), np.sum(class_total)))
 
 ```
+
+## CNN: Convolutional Neural Networks
+
+⇒ In `Pytorch`, there is no automatic GPU switching like in `Keras`, we need to move the model to train and data to the `device` prior to training or testing suitably
+
+#### MLP
+
+Image Classification ⇒ Flatten the image in one dimension → normalize pixel values → feed forward → classification score
+
+Flattened Image is needed ⇒ MLP only takes flattended input
+
+**During Flattening of an Image, the spatial information is lost, this is why, normal MLP is bad at Image Classification**
+
+#### CNN
+
+1. uses sparsely connected layers
+2. can accept 2D images
+3. has special properties: `local connectivity` and `parameter sharing`
+
+**High Frequency Component** ⇒ edges of objects in images
+
+**High Pass Filters** ⇒ sharpen an image → enhances high frequency parts of an image → emphasizes edges
+
+#### Why Regular Neural Networks Don't Scale Well to Full Images
+
+`CIFAR-10` ⇒ each image is 32x323 ⇒ 3072 parameters
+
+so, one neuron in the first layer will have 3072 weights
+
+So,
+
+Image_size⇑ ⇒ parameters  add up to be a huge number, which is hard to manage
+
+Huge number of parameters ⇒ Prone to overfitting
+
+#### 3D Volumes of Neurons
+
+In ConvNets, neurons are arranged in 3 dimensions ⇒ Often called 3D volume of activation
+
+E.G: CIFAR-10 has a 3D input volume activation of shape 32x32x3 as
+
+#### ConvLayers
+
+Parameters ⇒ set of learnable filters
+
+Each filter ⇒ spatially small but has full depth
+
+Each filter slide across height and width dimension of the image and generate a 2D activation map which is equivalent to response of the filter at every spatial positions.
+
+When we have more than one filter ⇒ we get separate 2D activation map ⇒ Stacking these 2D activation maps along `depth` dimension ⇒ Output volume of the layer
+
+This is how each ConvLayer generates outputs.
+
+****
