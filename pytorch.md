@@ -937,3 +937,45 @@ Similarity $\Rightarrow$ includes general color and textures we may find in a la
 
 ![Style Transfer Summary Process](style-transfer.png "Style Transfer Summary Process")
 
+In the paper, content representation is taken from Conv4_2.
+
+Let, 
+
+$C_c=$ Content Representation of the Input Image
+
+$T_c=$ Content Representation of the Target Image
+
+Content Loss, $L_c = \frac{1}{2}\sum(C_c-T_c)^2\Rightarrow$ measures how far away the content and target are from each other, so, by minimizing this loss, we can guarentee that the target image becomes more and more similar to the Content Image.
+
+Style Representation $\Rightarrow$ Gram matrix is used for this
+
+**Gram Matrix**:
+
+1. Flatten (X,Y) dimension of 3D volume output of the layer $\Rightarrow$ from left to right and top to bottom, and stack them on each other. Let, X = Flattend output.
+2. Gram Matrix = $X^T\cdot X$
+
+Gram matrix contains non-localized information of the image, that is approximately the style of the image.
+
+In gram matrix, $G[i][j]\Rightarrow$ contains the similarities between ith and jth feature map in the layer.
+
+In the paper, gram matrix is calculated in layer: $convN_1 ,\forall N \in [1,5]$
+
+Now, Let,
+
+$S_s=$ Style image's gram matrix list (1~5)
+
+$T_s=$ Target image's gram matrix list (1~5)
+
+Style Loss, $L_s=a\sum w_i(T_s,_i-S_s,_i)^2$
+
+Where,
+
+$a =$ number of values in each layer
+
+$w_i =$ style weights, i.e. how much style from different layers are reflected in the target image
+
+Total loss, $L_T = \alpha L_c + \beta L_s$
+
+Usually, $\beta >> \alpha$
+
+Usually, $\frac{\alpha}{\beta} = \frac{content}{style} ratio$
