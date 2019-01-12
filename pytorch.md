@@ -520,4 +520,91 @@ When we have more than one filter ⇒ we get separate 2D activation map ⇒ Stac
 
 This is how each ConvLayer generates outputs.
 
-****
+#### Local Connectivity
+
+Each neuron is connected to a local region of the input volume. Here, the `extent` of connectivity is always `equal` to the input volume along the `depth` axis, i.e. one neuron in the next layer is connected to a `limited region` of the previous layer in X and Y dimension, but connected in full in the Z dimension.
+
+**Example:**
+
+Let,
+
+CIFAR-10 Images $\Rightarrow$ [32x32x3]
+
+Filter size $\Rightarrow$ [3x3] $\Rightarrow$ A neuron in the first hidden layer will have (3x3x3) = 27 weights, as it'll be connected to a (3x3) area of the input image in X-Y dimension and to the full extent in the depth dimension.
+
+Similary, Filter size $\Rightarrow$ [5x5] $\Rightarrow$ A neuron in the first hidden layer will have (5x5x3) = 75 weights.
+
+#### Parameter Sharing
+
+Even with local connectivity, the number of weights, i.e. paramters we need to train can become very very large depending on the input image size. `Parameter Sharing` scheme is used to compensate for that and it can reduce the number of parameters to train drastically.
+
+Let,
+
+input $\Rightarrow$ [227x227x3]
+
+Filter size $\Rightarrow$ [11x11]
+
+Padding $\Rightarrow$ 0
+
+Stride $\Rightarrow$ 4
+
+Number of filters $\Rightarrow$ 96
+
+$\therefore$ Output of 1st Layer $\Rightarrow$ [55x55x96]
+
+Here every neuron in the first hidden layer is connected to an area of (11x11x3) of the input. So, every neuron has 363+1(bias) = 364 parameters to train. The output of the input layer in the given configuration needs, (55x55x96) neurons. So, there are (55x55x96)x364 = 105,705,600 parameters to train. This is very huge for just training one layer.
+
+One assumption $\Rightarrow$ dramatic reduction in number of parameters $\Downarrow$
+
+If a feature is useful to compute in some region $(x_1,y_1)$, it should be useful to compute at a different position $(x_2,y_2)$. So, in a 2D depth slice $\Rightarrow$ We constrain the neurons to use the same weights and bias.
+
+So, in first convLayer of the example $\Rightarrow$ 96x11x11x3 +96 = 34848+96 parameters need to be trained. I.e. all of (55x55) neurons in the same depth slice, uses the same weights as parameters and tunes them accordingly.
+
+
+#### Insights
+
+If we want to,
+
+1. Increase Nodes in a CNN layer $\Rightarrow$ increase number of filters
+2. Increase Size of detected pattern $\Rightarrow$ increase size of the filters used
+
+#### Some Calculation
+
+Let,
+
+Input volume $\Rightarrow [W_1*H_1*D_1]$
+
+Filter Size $\Rightarrow [F_1*F_2]$
+
+Padding $\Rightarrow P$
+
+Stride $\Rightarrow S$
+
+Number of filters $\Rightarrow K$
+
+Then, output volume of this layer need to have size $\Rightarrow [W_2*H_2*D_2]$
+
+Where,
+
+$W_2=(W_1-F_1+2P)/S+1$
+
+$H_2=(H_1-F_2+2P)/S+1$
+
+$D_2=K$
+
+### Pytorch Code For Convolutional Neural Networks
+
+#### Check For CUDA and GPU
+
+```python
+import torch
+import numpy as np
+
+# check if CUDA is available
+train_on_gpu = torch.cuda.is_available()
+
+if not train_on_gpu:
+    print('CUDA is not available.  Training on CPU ...')
+else:
+    print('CUDA is available!  Training on GPU ...')
+```
